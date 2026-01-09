@@ -13,27 +13,38 @@ dotenv.config();
 
 const app = express();
 
-// --- UPDATED MIDDLEWARE: CORS FOR PRODUCTION ---
+// --- REFINED CORS FOR PRODUCTION ---
 const allowedOrigins = [
   'http://localhost:5173', // Local Vite
   'http://localhost:3000', // Local React
-  process.env.FRONTEND_URL  // Your Vercel Link (set this in Render Dashboard)
+  'https://nexa-investment-platform.vercel.app' // Your specific Vercel URL
 ];
+
+// Add the dynamic FRONTEND_URL from environment variables if it exists
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, "")); // Remove trailing slash if present
+}
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(null, true);
   },
-  credentials: true,
+  credentials: true, // Required for cookies/authorization headers
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 }));
+
+// Handle preflight requests explicitly for all routes
+app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -56,6 +67,10 @@ app.get('/api/health', (req, res) => {
 
 // --- GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ success: false, message: 'CORS Error: Origin not allowed' });
+  }
+  
   console.error('💥 Global Error:', err.stack);
   res.status(500).json({
     success: false,
