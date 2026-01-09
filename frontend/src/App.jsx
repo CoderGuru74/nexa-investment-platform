@@ -8,7 +8,6 @@ import Layout from './components/Layout';
 // Import your components
 import WithdrawalForm from './components/WithdrawalForm';
 import AdminAirdrop from './components/admin/AdminAirdrop';
-// NEW: Import the Withdrawal Queue
 import AdminWithdrawalQueue from './components/admin/AdminWithdrawalQueue';
 
 function PrivateRoute({ children }) {
@@ -22,18 +21,22 @@ function PrivateRoute({ children }) {
     );
   }
   
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
 function AdminRoute({ children }) {
   const { isAuthenticated, user, loading } = useAuth();
   
-  if (loading) return <div>Loading...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-foreground">Verifying Admin...</div>
+    </div>
+  );
 
-  // Restrict to your specific admin email
+  // Updated logic to use the user object from our new hook
   const isAdmin = isAuthenticated && user?.email === 'success_test_v1@gmail.com'; 
 
-  return isAdmin ? children : <Navigate to="/" />;
+  return isAdmin ? children : <Navigate to="/" replace />;
 }
 
 function App() {
@@ -69,7 +72,7 @@ function App() {
           }
         />
 
-        {/* Admin: Airdrop Page */}
+        {/* Admin Section */}
         <Route
           path="/admin/airdrop"
           element={
@@ -83,7 +86,6 @@ function App() {
           }
         />
 
-        {/* Admin: Withdrawal Management (The "Tick" or "Cancel" page) */}
         <Route
           path="/admin/withdrawals"
           element={
@@ -97,7 +99,7 @@ function App() {
           }
         />
 
-        <Route path="*" element={<Navigate to="/" />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
